@@ -23,14 +23,13 @@ function Home() {
   const { results, status, loadMore } = usePaginatedQuery(api.posts.list, filter === 'All posts' ? {} : { category: filter }, { initialNumItems: 12 })
   return <>
     <h1 className="sr-only">Journal</h1>
-    <figure className="skyline"><img src="/images/london.png" alt="A playful black and white London skyline, with robots climbing its landmarks" /><figcaption>LONDON, EARTH <span>—</span> MOSTLY HUMAN.</figcaption></figure>
+    <figure className="skyline"><img src="/images/london.png" alt="A playful black and white London skyline, with robots climbing its landmarks" /></figure>
     {latest === undefined ? <Loading /> : latest && <section className="featured"><div><div className="eyebrow accent">THE LATEST ENTRY</div><Link className="feature-link" to={`/posts/${latest.slug}`}><h2>{latest.title}</h2></Link><p>{latest.excerpt}</p><Meta post={latest} /><Link className="read-link inline-flex items-center gap-2" to={`/posts/${latest.slug}`}>Read the story <ArrowUpRight size={17} /></Link></div><Link to={`/posts/${latest.slug}`} className="robot-card" aria-label={`Read ${latest.title}`}><span className="card-top">A NOTE TO SELF <span>001</span></span><Robot /><span className="card-bottom">Less noise. More life.</span></Link></section>}
     <section className={`writing ${latest === null ? 'first-entry' : ''}`} id="writing">
       <div className="writing-heading flex flex-wrap items-center justify-between gap-4"><h2>All writing</h2><div className="filters flex flex-wrap gap-1" aria-label="Filter posts">{(['All posts', 'Life', 'Technology', 'Notes'] as const).map(item => <button key={item} aria-pressed={filter === item} onClick={() => setFilter(item)} className={filter === item ? 'selected' : ''}>{item}</button>)}</div></div>
       <div aria-live="polite">{status === 'LoadingFirstPage' ? <Loading message="Loading stories…" /> : results.length === 0 ? <div className="empty-state"><h3>{filter === 'All posts' ? 'The first page is still to come.' : `No ${filter.toLowerCase()} entries yet.`}</h3><p>{filter === 'All posts' ? 'A few thoughts are taking shape. Come back soon.' : 'Try another topic, or come back for the next story.'}</p></div> : results.map(post => <Link className="post-row" key={post._id} to={`/posts/${post.slug}`}><time dateTime={new Date(post.publishedAt).toISOString()}>{formatDate(post.publishedAt, true)}</time><div><h3>{post.title}</h3><p>{post.excerpt}</p><span className="mobile-meta">{post.category} · {post.readingMinutes} min read</span></div><span className="row-category">{post.category}</span><ArrowUpRight className="row-arrow" size={19} /></Link>)}</div>
       {(status === 'CanLoadMore' || status === 'LoadingMore') && <button className="secondary-button load-more" disabled={status === 'LoadingMore'} onClick={() => loadMore(12)}>{status === 'LoadingMore' ? 'Loading…' : 'More stories'}</button>}
     </section>
-    <aside className="hello flex items-center gap-5"><Robot /><div><h3>A person behind the pixels.</h3><p>100% Human</p><Link to="/about" className="inline-flex items-center gap-1">A little more about me <ArrowRight size={14} /></Link></div></aside>
   </>
 }
 
