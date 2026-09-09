@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import { ArrowUpRight, ArrowLeft, ArrowRight, Moon, Sun } from 'lucide-react'
@@ -22,7 +22,7 @@ function Home() {
   const latest = useQuery(api.posts.latest)
   const { results, status, loadMore } = usePaginatedQuery(api.posts.list, filter === 'All posts' ? {} : { category: filter }, { initialNumItems: 12 })
   return <>
-    <section className="intro"><h1 className="eyebrow flex items-center gap-2"><span className="status-dot" /> A PERSONAL JOURNAL BY CHARLIE</h1><p>Thoughts on the things I build, the places I go,<br className="hidden sm:block" /> and what I’m learning along the way.</p></section>
+    <h1 className="sr-only">Journal</h1>
     <figure className="skyline"><img src="/images/london.png" alt="A playful black and white London skyline, with robots climbing its landmarks" /><figcaption>LONDON, EARTH <span>—</span> MOSTLY HUMAN.</figcaption></figure>
     {latest === undefined ? <Loading /> : latest && <section className="featured"><div><div className="eyebrow accent">THE LATEST ENTRY</div><Link className="feature-link" to={`/posts/${latest.slug}`}><h2>{latest.title}</h2></Link><p>{latest.excerpt}</p><Meta post={latest} /><Link className="read-link inline-flex items-center gap-2" to={`/posts/${latest.slug}`}>Read the story <ArrowUpRight size={17} /></Link></div><Link to={`/posts/${latest.slug}`} className="robot-card" aria-label={`Read ${latest.title}`}><span className="card-top">A NOTE TO SELF <span>001</span></span><Robot /><span className="card-bottom">Less noise. More life.</span></Link></section>}
     <section className={`writing ${latest === null ? 'first-entry' : ''}`} id="writing">
@@ -30,7 +30,7 @@ function Home() {
       <div aria-live="polite">{status === 'LoadingFirstPage' ? <Loading message="Loading stories…" /> : results.length === 0 ? <div className="empty-state"><h3>{filter === 'All posts' ? 'The first page is still to come.' : `No ${filter.toLowerCase()} entries yet.`}</h3><p>{filter === 'All posts' ? 'A few thoughts are taking shape. Come back soon.' : 'Try another topic, or come back for the next story.'}</p></div> : results.map(post => <Link className="post-row" key={post._id} to={`/posts/${post.slug}`}><time dateTime={new Date(post.publishedAt).toISOString()}>{formatDate(post.publishedAt, true)}</time><div><h3>{post.title}</h3><p>{post.excerpt}</p><span className="mobile-meta">{post.category} · {post.readingMinutes} min read</span></div><span className="row-category">{post.category}</span><ArrowUpRight className="row-arrow" size={19} /></Link>)}</div>
       {(status === 'CanLoadMore' || status === 'LoadingMore') && <button className="secondary-button load-more" disabled={status === 'LoadingMore'} onClick={() => loadMore(12)}>{status === 'LoadingMore' ? 'Loading…' : 'More stories'}</button>}
     </section>
-    <aside className="hello flex items-center gap-5"><Robot /><div><h3>A person behind the pixels.</h3><p>I’m Charlie. A curious human who likes building things and writing them down.</p><Link to="/about" className="inline-flex items-center gap-1">A little more about me <ArrowRight size={14} /></Link></div></aside>
+    <aside className="hello flex items-center gap-5"><Robot /><div><h3>A person behind the pixels.</h3><p>100% Human</p><Link to="/about" className="inline-flex items-center gap-1">A little more about me <ArrowRight size={14} /></Link></div></aside>
   </>
 }
 
@@ -62,7 +62,7 @@ function App() {
     else window.scrollTo(0, 0)
     if (!location.pathname.startsWith('/posts/')) document.title = `${location.pathname === '/about' ? 'About Charlie' : location.pathname === '/write' ? 'Writing desk' : location.pathname === '/signin' ? 'Author sign in' : 'Charlie’s journal'} — A little human`
   }, [location])
-  return <div className="shell"><a href="#main" className="skip-link">Skip to content</a><header className="header flex items-center justify-between"><Link to="/" className="brand flex items-center gap-2"><Robot /><span>charlie<span className="accent">.</span></span></Link><nav className="flex items-center" aria-label="Main navigation"><NavLink to="/" end>Journal</NavLink><NavLink to="/about">About</NavLink><span className="nav-divider" /><button className="theme-toggle" onClick={() => setDark(!dark)} aria-label={`Switch to ${dark ? 'light' : 'dark'} mode`} title={`Switch to ${dark ? 'light' : 'dark'} mode`}>{dark ? <Sun size={18} /> : <Moon size={18} />}</button></nav></header><main id="main"><Routes><Route path="/" element={<Home />} /><Route path="/posts/:slug" element={<Article />} /><Route path="/about" element={<About />} /><Route path="/signin" element={<SignIn />} /><Route path="/write" element={<WritePost />} /><Route path="*" element={<NotFound />} /></Routes></main><footer className="footer flex flex-wrap items-center justify-between gap-3"><span>© {new Date().getFullYear()} Charlie <span className="footer-dot">·</span> A little corner of the internet.</span><div className="footer-links flex items-center gap-5"><AuthorLink /><span>Made with curiosity <span className="accent">✳</span></span></div></footer></div>
+  return <div className="shell"><a href="#main" className="skip-link">Skip to content</a><header className="header flex items-center justify-between"><Link to="/" className="brand flex items-center gap-2"><Robot /><span>charlie<span className="accent">.</span></span></Link><nav className="flex items-center" aria-label="Main navigation"><NavLink to="/" end>Journal</NavLink><NavLink to="/about">About</NavLink><span className="nav-divider" /><button className="theme-toggle" onClick={() => setDark(!dark)} aria-label={`Switch to ${dark ? 'light' : 'dark'} mode`} title={`Switch to ${dark ? 'light' : 'dark'} mode`}>{dark ? <Sun size={18} /> : <Moon size={18} />}</button></nav></header><main id="main"><Routes><Route path="/" element={<Home />} /><Route path="/posts/:slug" element={<Article />} /><Route path="/about" element={<About />} /><Route path="/signin" element={<SignIn />} /><Route path="/write" element={<WritePost />} /><Route path="*" element={<NotFound />} /></Routes></main><footer className="footer flex items-center justify-end"><AuthorLink /></footer></div>
 }
 
 const convexUrl = import.meta.env.VITE_CONVEX_URL
