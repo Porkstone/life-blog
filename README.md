@@ -1,4 +1,4 @@
-# Charllieb’s journal
+# Charlieb’s journal
 
 A single-author personal blog built with React, TypeScript, Vite, Tailwind, Convex, and Convex Auth. Public reading requires no login. Only GitHub account **Porkstone** (immutable ID `383633`) can sign in and publish.
 

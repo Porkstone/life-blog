@@ -38,19 +38,19 @@ function Article() {
   const location = useLocation()
   const post = useQuery(api.posts.getBySlug, { slug })
   const viewer = useQuery(api.posts.viewer)
-  useEffect(() => { if (post) document.title = `${post.title} — Charllieb’s journal` }, [post])
+  useEffect(() => { if (post) document.title = `${post.title} — Charlieb’s journal` }, [post])
   if (post === undefined) return <Loading message="Opening the story…" />
   if (!post) return <NotFound />
   return <article className="article">
     <div className="editor-toolbar flex flex-wrap items-center justify-between gap-3"><BackLink />{viewer?.canPublish && <Link className="text-button inline-flex items-center gap-2" to={`/posts/${post.slug}/edit`}><Pencil size={14} /> Edit post</Link>}</div>{location.state?.updated && <p className="publish-success" role="status">Your changes are saved.</p>}{location.state?.published && <p className="publish-success" role="status">Your post is published. It’s now part of the journal.</p>}
     <Meta post={post} /><h1>{post.title}</h1><p className="article-deck">{post.excerpt}</p>
-    <div className="author flex items-center gap-3"><Robot /><span>Written by Charllieb</span></div>
+    <div className="author flex items-center gap-3"><Robot /><span>Written by Charlieb</span></div>
     <PostBody content={post.content} /><div className="article-end" aria-hidden="true">✳</div>
     <Link to="/#writing" className="next-post"><span className="eyebrow">KEEP EXPLORING</span><h2>Back to the journal <ArrowRight size={22} /></h2></Link>
   </article>
 }
 
-function About() { return <section className="about article"><Link to="/" className="back-link inline-flex items-center gap-2"><ArrowLeft size={15} /> Back to the journal</Link><div className="eyebrow accent">HELLO THERE</div><h1>A person behind<br />the pixels.</h1><div className="about-robot"><Robot /></div><div className="prose"><p>I’m Charllieb. A curious human who likes building things, exploring London, and writing down what I learn along the way.</p><p>This is my little corner of the internet. Part notebook, part journal: a home for thoughts on technology, everyday life, and the interesting bits in between.</p><p>No big promises. Just a few stories, shared at a human pace.</p></div><Link className="read-link inline-flex items-center gap-2" to="/#writing">Explore the journal <ArrowRight size={16} /></Link></section> }
+function About() { return <section className="about article"><Link to="/" className="back-link inline-flex items-center gap-2"><ArrowLeft size={15} /> Back to the journal</Link><div className="eyebrow accent">HELLO THERE</div><h1>A person behind<br />the pixels.</h1><div className="about-robot"><Robot /></div><div className="prose"><p>I’m Charlieb. A curious human who likes building things, exploring London, and writing down what I learn along the way.</p><p>This is my little corner of the internet. Part notebook, part journal: a home for thoughts on technology, everyday life, and the interesting bits in between.</p><p>No big promises. Just a few stories, shared at a human pace.</p></div><Link className="read-link inline-flex items-center gap-2" to="/#writing">Explore the journal <ArrowRight size={16} /></Link></section> }
 function NotFound() { return <section className="article"><h1>A little lost?</h1><p className="article-deck">This page doesn’t exist.</p><Link className="read-link inline-flex" to="/">Back to the journal →</Link></section> }
 
 function App() {
@@ -60,9 +60,9 @@ function App() {
   useEffect(() => {
     if (location.hash) requestAnimationFrame(() => document.getElementById(location.hash.slice(1))?.scrollIntoView())
     else window.scrollTo(0, 0)
-    if (!location.pathname.startsWith('/posts/')) document.title = `${location.pathname === '/about' ? 'About Charllieb' : location.pathname === '/write' ? 'Writing desk' : location.pathname === '/signin' ? 'Author sign in' : 'Charllieb’s journal'} — A little human`
+    if (!location.pathname.startsWith('/posts/')) document.title = `${location.pathname === '/about' ? 'About Charlieb' : location.pathname === '/write' ? 'Writing desk' : location.pathname === '/signin' ? 'Author sign in' : 'Charlieb’s journal'} — A little human`
   }, [location])
-  return <div className="shell"><a href="#main" className="skip-link">Skip to content</a><header className="header flex items-center justify-between"><Link to="/" className="brand flex items-center gap-2"><Robot /><span>charllieb<span className="accent">.</span></span></Link><nav className="flex items-center" aria-label="Main navigation"><NavLink to="/" end>Journal</NavLink><NavLink to="/about">About</NavLink><span className="nav-divider" /><button className="theme-toggle" onClick={() => setDark(!dark)} aria-label={`Switch to ${dark ? 'light' : 'dark'} mode`} title={`Switch to ${dark ? 'light' : 'dark'} mode`}>{dark ? <Sun size={18} /> : <Moon size={18} />}</button></nav></header><main id="main"><Routes><Route path="/" element={<Home />} /><Route path="/posts/:slug" element={<Article />} /><Route path="/about" element={<About />} /><Route path="/signin" element={<SignIn />} /><Route path="/write" element={<WritePost />} /><Route path="/posts/:slug/edit" element={<EditPost />} /><Route path="*" element={<NotFound />} /></Routes></main><footer className="footer flex items-center justify-end"><AuthorLink /></footer></div>
+  return <div className="shell"><a href="#main" className="skip-link">Skip to content</a><header className="header flex items-center justify-between"><Link to="/" className="brand flex items-center gap-2"><Robot /><span>charlieb<span className="accent">.</span></span></Link><nav className="flex items-center" aria-label="Main navigation"><NavLink to="/" end>Journal</NavLink><NavLink to="/about">About</NavLink><span className="nav-divider" /><button className="theme-toggle" onClick={() => setDark(!dark)} aria-label={`Switch to ${dark ? 'light' : 'dark'} mode`} title={`Switch to ${dark ? 'light' : 'dark'} mode`}>{dark ? <Sun size={18} /> : <Moon size={18} />}</button></nav></header><main id="main"><Routes><Route path="/" element={<Home />} /><Route path="/posts/:slug" element={<Article />} /><Route path="/about" element={<About />} /><Route path="/signin" element={<SignIn />} /><Route path="/write" element={<WritePost />} /><Route path="/posts/:slug/edit" element={<EditPost />} /><Route path="*" element={<NotFound />} /></Routes></main><footer className="footer flex items-center justify-end"><AuthorLink /></footer></div>
 }
 
 const convexUrl = import.meta.env.VITE_CONVEX_URL

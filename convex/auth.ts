@@ -21,7 +21,7 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
       }
       const fields = {
         githubId: AUTHOR_GITHUB_ID,
-        name: 'Charllieb',
+        name: 'Charlieb',
         ...(typeof args.profile.email === 'string' ? { email: args.profile.email } : {}),
         ...(typeof args.profile.image === 'string' ? { image: args.profile.image } : {}),
       }

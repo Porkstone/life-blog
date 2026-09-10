@@ -8,7 +8,7 @@ const input = { title: 'A real entry', slug: 'a-real-entry', excerpt: 'A short i
 
 async function setupAuthor() {
   const t = convexTest(schema, modules)
-  const userId = await t.run(ctx => ctx.db.insert('users', { name: 'Charllieb', githubId: '383633', email: 'private@example.com' }))
+  const userId = await t.run(ctx => ctx.db.insert('users', { name: 'Charlieb', githubId: '383633', email: 'private@example.com' }))
   return { t, author: t.withIdentity({ subject: `${userId}|test-session` }) }
 }
 
@@ -18,7 +18,7 @@ describe('post publishing authorization', () => {
     await t.run(ctx => ctx.db.insert('authVerifiers', { signature: 'test-signature' }))
     await expect(t.mutation(internal.auth.store, { args: {
       type: 'userOAuth', provider: 'github', providerAccountId: '99999',
-      profile: { githubId: '99999', name: 'Charllieb' }, signature: 'test-signature',
+      profile: { githubId: '99999', name: 'Charlieb' }, signature: 'test-signature',
     } })).rejects.toThrow('restricted to its author')
   })
 
@@ -30,7 +30,7 @@ describe('post publishing authorization', () => {
       profile: { githubId: '383633', name: 'Porkstone' }, signature: 'author-signature',
     } })
     const user = await t.run(ctx => ctx.db.query('users').first())
-    expect(user).toMatchObject({ githubId: '383633', name: 'Charllieb' })
+    expect(user).toMatchObject({ githubId: '383633', name: 'Charlieb' })
   })
 
   test('anonymous visitors can read but cannot publish', async () => {
@@ -40,9 +40,9 @@ describe('post publishing authorization', () => {
     await expect(t.mutation(api.posts.create, input)).rejects.toThrow('Only the blog author')
   })
 
-  test('another signed-in account cannot impersonate Charllieb by name or email', async () => {
+  test('another signed-in account cannot impersonate Charlieb by name or email', async () => {
     const t = convexTest(schema, modules)
-    const id = await t.run(ctx => ctx.db.insert('users', { name: 'Charllieb', email: 'private@example.com', githubId: '99999' }))
+    const id = await t.run(ctx => ctx.db.insert('users', { name: 'Charlieb', email: 'private@example.com', githubId: '99999' }))
     const other = t.withIdentity({ subject: `${id}|test-session` })
     expect(await other.query(api.posts.viewer)).toBeNull()
     await expect(other.mutation(api.posts.create, input)).rejects.toThrow('Only the blog author')
@@ -50,7 +50,7 @@ describe('post publishing authorization', () => {
 
   test('the authorized author publishes persisted content readable without login', async () => {
     const { t, author } = await setupAuthor()
-    expect(await author.query(api.posts.viewer)).toEqual({ name: 'Charllieb', canPublish: true })
+    expect(await author.query(api.posts.viewer)).toEqual({ name: 'Charlieb', canPublish: true })
     const result = await author.mutation(api.posts.create, input)
     const article = await t.query(api.posts.getBySlug, { slug: result.slug })
     expect(article).toMatchObject({ title: input.title, content: input.content, readingMinutes: 1 })

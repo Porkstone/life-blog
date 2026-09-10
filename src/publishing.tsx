@@ -26,7 +26,7 @@ export function SignIn() {
   if (viewer?.canPublish) return <Navigate to="/write" replace />
   return <section className="sign-in article">
     <Link to="/" className="back-link inline-flex items-center gap-2"><ArrowLeft size={15} /> Back to the journal</Link>
-    <Robot /><div className="eyebrow accent">THE WRITING DESK</div><h1>Hello, Charllieb.</h1>
+    <Robot /><div className="eyebrow accent">THE WRITING DESK</div><h1>Hello, Charlieb.</h1>
     <p className="article-deck">A quiet place to put your thoughts into words.</p>
     <p className="form-help">Sign in with the Porkstone GitHub account to publish. Everyone can read the journal without signing in.</p>
     {!ready && <p className="form-notice" role="status">Author sign-in is being set up. Please check back shortly.</p>}
@@ -42,7 +42,7 @@ export function SignIn() {
 
 type Draft = { title: string; slug: string; excerpt: string; category: 'Life' | 'Technology' | 'Notes'; content: string }
 const emptyDraft: Draft = { title: '', slug: '', excerpt: '', category: 'Life', content: '' }
-const draftKey = 'charllieb-post-draft-v1'
+const draftKey = 'charlieb-post-draft-v1'
 function restoreDraft(): Draft {
   try {
     const value = JSON.parse(localStorage.getItem(draftKey) || 'null')
@@ -123,7 +123,7 @@ function Editor({ post }: { post?: Draft & Pick<Doc<'posts'>, '_id' | 'published
         <label>Short summary<textarea required maxLength={400} rows={3} value={draft.excerpt} onChange={e => change('excerpt', e.target.value)} placeholder="A sentence or two for the journal page." /></label>
         <label>Your story<textarea required maxLength={100000} rows={15} className="story-input" value={draft.content} onChange={e => change('content', e.target.value)} placeholder="Begin here…" /><span className="input-hint">Plain text. Leave a blank line between paragraphs.</span></label>
       </fieldset>
-      {preview && <div className="editor-preview"><Meta post={{ category: draft.category, publishedAt: post?.publishedAt ?? Date.now(), readingMinutes: Math.max(1, Math.ceil(draft.content.trim().split(/\s+/).length / 220)) }} /><h2>{draft.title || 'Your title goes here'}</h2><p className="article-deck">{draft.excerpt || 'Your short summary will appear here.'}</p><div className="author flex items-center gap-3"><Robot /><span>Written by Charllieb</span></div><PostBody content={draft.content || 'Your story will appear here.'} /></div>}
+      {preview && <div className="editor-preview"><Meta post={{ category: draft.category, publishedAt: post?.publishedAt ?? Date.now(), readingMinutes: Math.max(1, Math.ceil(draft.content.trim().split(/\s+/).length / 220)) }} /><h2>{draft.title || 'Your title goes here'}</h2><p className="article-deck">{draft.excerpt || 'Your short summary will appear here.'}</p><div className="author flex items-center gap-3"><Robot /><span>Written by Charlieb</span></div><PostBody content={draft.content || 'Your story will appear here.'} /></div>}
       {error && <p className="form-error" role="alert">{error}</p>}
       <div className="publish-bar flex flex-wrap items-center justify-between gap-3"><span>{post ? 'Saved changes are visible to everyone immediately.' : 'Publishing makes this post visible to everyone.'}</span>{post && !busy && <Link className="text-button" to={`/posts/${post.slug}`}>Cancel</Link>}<button className="primary-button" type={preview ? 'button' : 'submit'} disabled={busy} onClick={preview ? () => setPreview(false) : undefined}>{preview ? <><Pencil size={16} /> Back to writing</> : <><Send size={16} />{busy ? (post ? 'Saving...' : 'Publishing...') : post ? 'Save changes' : 'Publish post'}</>}</button></div>
     </form>

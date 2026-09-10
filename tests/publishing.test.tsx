@@ -14,7 +14,7 @@ vi.mock('convex/react', () => ({
 }))
 vi.mock('@convex-dev/auth/react', () => ({ useAuthActions: () => ({ signOut: vi.fn() }) }))
 
-beforeEach(() => { localStorage.clear(); create.mockReset(); update.mockReset(); query.mockReset(); auth.mockReturnValue({ isLoading: false, isAuthenticated: true }); query.mockReturnValue({ name: 'Charllieb', canPublish: true }) })
+beforeEach(() => { localStorage.clear(); create.mockReset(); update.mockReset(); query.mockReset(); auth.mockReturnValue({ isLoading: false, isAuthenticated: true }); query.mockReturnValue({ name: 'Charlieb', canPublish: true }) })
 afterEach(cleanup)
 
 function renderEditor() {
@@ -41,7 +41,7 @@ test('preview keeps the draft, then publishes and clears the saved draft', async
   await screen.findByText('Published article')
   expect(create).toHaveBeenCalledOnce()
   expect(create).toHaveBeenCalledWith(expect.objectContaining({ title: 'My next story', slug: 'my-next-story', category: 'Life' }))
-  expect(localStorage.getItem('charllieb-post-draft-v1')).toBeNull()
+  expect(localStorage.getItem('charlieb-post-draft-v1')).toBeNull()
 })
 
 test('a failed publication keeps the editor and local draft available', async () => {
@@ -51,12 +51,12 @@ test('a failed publication keeps the editor and local draft available', async ()
   await user.click(screen.getByRole('button', { name: 'Publish post' }))
   await screen.findByRole('alert')
   expect(screen.getByRole('alert').textContent).toContain('Your draft is still here')
-  expect(JSON.parse(localStorage.getItem('charllieb-post-draft-v1')!).title).toBe('My next story')
+  expect(JSON.parse(localStorage.getItem('charlieb-post-draft-v1')!).title).toBe('My next story')
   await waitFor(() => expect((screen.getByRole('button', { name: 'Publish post' }) as HTMLButtonElement).disabled).toBe(false))
 })
 
 test('restores a draft and preserves a manually chosen URL when the title changes', async () => {
-  localStorage.setItem('charllieb-post-draft-v1', JSON.stringify({ title: 'Old title', slug: 'permanent-url', excerpt: 'Summary', content: 'Saved writing', category: 'Notes' }))
+  localStorage.setItem('charlieb-post-draft-v1', JSON.stringify({ title: 'Old title', slug: 'permanent-url', excerpt: 'Summary', content: 'Saved writing', category: 'Notes' }))
   const user = renderEditor()
   await user.clear(screen.getByLabelText('Title'))
   await user.type(screen.getByLabelText('Title'), 'A revised title')
@@ -73,7 +73,7 @@ function renderEdit() {
 }
 
 test('loads existing content, previews edits, and saves without touching the new-post draft', async () => {
-  localStorage.setItem('charllieb-post-draft-v1', 'unrelated draft')
+  localStorage.setItem('charlieb-post-draft-v1', 'unrelated draft')
   update.mockResolvedValue({ id: 'post-id', slug: 'original-url' })
   const user = renderEdit()
   expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe('Original title')
@@ -86,7 +86,7 @@ test('loads existing content, previews edits, and saves without touching the new
   await screen.findByText('Updated article')
   expect(update).toHaveBeenCalledWith({ id: 'post-id', title: 'Revised title', slug: 'original-url', excerpt: 'Original summary', category: 'Life', content: 'Original story' })
   expect(create).not.toHaveBeenCalled()
-  expect(localStorage.getItem('charllieb-post-draft-v1')).toBe('unrelated draft')
+  expect(localStorage.getItem('charlieb-post-draft-v1')).toBe('unrelated draft')
 })
 
 test('failed saves retain edits and allow retry', async () => {
