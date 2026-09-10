@@ -24,7 +24,7 @@ export const viewer = query({
   returns: v.union(v.null(), v.object({ name: v.string(), canPublish: v.boolean() })),
   handler: async ctx => {
     const author = await getAuthor(ctx)
-    return author ? { name: 'Charlie', canPublish: true } : null
+    return author ? { name: 'Charllieb', canPublish: true } : null
   },
 })
 
