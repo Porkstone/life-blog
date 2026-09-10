@@ -65,27 +65,49 @@ export const getBySlug = query({
   },
 })
 
+const postFields = { title: v.string(), excerpt: v.string(), category, content: v.string(), slug: v.string() }
+
+function validatePost(args: Pick<Doc<'posts'>, 'title' | 'excerpt' | 'content' | 'slug' | 'category'>) {
+  const title = args.title.trim()
+  const excerpt = args.excerpt.trim()
+  const content = args.content.trim()
+  const slug = args.slug.trim().toLowerCase()
+  if (!title || title.length > 160) throw new ConvexError('Use a title between 1 and 160 characters.')
+  if (!excerpt || excerpt.length > 400) throw new ConvexError('Use a summary between 1 and 400 characters.')
+  if (!content || content.length > 100_000) throw new ConvexError('Write a post between 1 and 100,000 characters.')
+  if (slug.length > 160 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
+    throw new ConvexError('Use a URL slug of up to 160 lowercase letters, numbers, and hyphens.')
+  }
+  return { title, excerpt, content, slug, category: args.category,
+    readingMinutes: Math.max(1, Math.ceil(content.split(/\s+/u).length / 220)) }
+}
+
 export const create = mutation({
-  args: { title: v.string(), excerpt: v.string(), category, content: v.string(), slug: v.string() },
+  args: postFields,
   returns: v.object({ id: v.id('posts'), slug: v.string() }),
   handler: async (ctx, args) => {
     const author = await requireAuthor(ctx)
-    const title = args.title.trim()
-    const excerpt = args.excerpt.trim()
-    const content = args.content.trim()
-    const slug = args.slug.trim().toLowerCase()
-    if (!title || title.length > 160) throw new ConvexError('Use a title between 1 and 160 characters.')
-    if (!excerpt || excerpt.length > 400) throw new ConvexError('Use a summary between 1 and 400 characters.')
-    if (!content || content.length > 100_000) throw new ConvexError('Write a post between 1 and 100,000 characters.')
-    if (slug.length > 160 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
-      throw new ConvexError('Use a URL slug of up to 160 lowercase letters, numbers, and hyphens.')
-    }
-    const existing = await ctx.db.query('posts').withIndex('by_slug', q => q.eq('slug', slug)).unique()
+    const post = validatePost(args)
+    const existing = await ctx.db.query('posts').withIndex('by_slug', q => q.eq('slug', post.slug)).unique()
     if (existing) throw new ConvexError('That post URL is already in use. Choose a different slug.')
     const id = await ctx.db.insert('posts', {
-      title, excerpt, content, slug, category: args.category, authorId: author._id,
-      publishedAt: Date.now(), readingMinutes: Math.max(1, Math.ceil(content.split(/\s+/u).length / 220)),
+      ...post, authorId: author._id, publishedAt: Date.now(),
     })
-    return { id, slug }
+    return { id, slug: post.slug }
+  },
+})
+
+export const update = mutation({
+  args: { id: v.id('posts'), ...postFields },
+  returns: v.object({ id: v.id('posts'), slug: v.string() }),
+  handler: async (ctx, args) => {
+    await requireAuthor(ctx)
+    const existing = await ctx.db.get(args.id)
+    if (!existing) throw new ConvexError('This post no longer exists.')
+    const post = validatePost(args)
+    const duplicate = await ctx.db.query('posts').withIndex('by_slug', q => q.eq('slug', post.slug)).unique()
+    if (duplicate && duplicate._id !== args.id) throw new ConvexError('That post URL is already in use. Choose a different slug.')
+    await ctx.db.patch(args.id, post)
+    return { id: args.id, slug: post.slug }
   },
 })

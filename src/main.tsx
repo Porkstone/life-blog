@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useParams } from 'react-router-dom'
-import { ArrowUpRight, ArrowLeft, ArrowRight, Moon, Sun } from 'lucide-react'
+import { ArrowUpRight, ArrowLeft, ArrowRight, Moon, Sun, Pencil } from 'lucide-react'
 import { ConvexReactClient, usePaginatedQuery, useQuery } from 'convex/react'
 import { ConvexAuthProvider } from '@convex-dev/auth/react'
 import { api } from '../convex/_generated/api'
 import { BackLink, ErrorBoundary, formatDate, Loading, Meta, PostBody, Robot } from './components'
-import { AuthorLink, SignIn, WritePost } from './publishing'
+import { AuthorLink, EditPost, SignIn, WritePost } from './publishing'
 import '@fontsource/dm-sans/400.css'
 import '@fontsource/dm-sans/500.css'
 import '@fontsource/dm-sans/600.css'
@@ -37,11 +37,12 @@ function Article() {
   const { slug = '' } = useParams()
   const location = useLocation()
   const post = useQuery(api.posts.getBySlug, { slug })
+  const viewer = useQuery(api.posts.viewer)
   useEffect(() => { if (post) document.title = `${post.title} — Charlie’s journal` }, [post])
   if (post === undefined) return <Loading message="Opening the story…" />
   if (!post) return <NotFound />
   return <article className="article">
-    <BackLink />{location.state?.published && <p className="publish-success" role="status">Your post is published. It’s now part of the journal.</p>}
+    <div className="editor-toolbar flex flex-wrap items-center justify-between gap-3"><BackLink />{viewer?.canPublish && <Link className="text-button inline-flex items-center gap-2" to={`/posts/${post.slug}/edit`}><Pencil size={14} /> Edit post</Link>}</div>{location.state?.updated && <p className="publish-success" role="status">Your changes are saved.</p>}{location.state?.published && <p className="publish-success" role="status">Your post is published. It’s now part of the journal.</p>}
     <Meta post={post} /><h1>{post.title}</h1><p className="article-deck">{post.excerpt}</p>
     <div className="author flex items-center gap-3"><Robot /><span>Written by Charlie</span></div>
     <PostBody content={post.content} /><div className="article-end" aria-hidden="true">✳</div>
@@ -61,7 +62,7 @@ function App() {
     else window.scrollTo(0, 0)
     if (!location.pathname.startsWith('/posts/')) document.title = `${location.pathname === '/about' ? 'About Charlie' : location.pathname === '/write' ? 'Writing desk' : location.pathname === '/signin' ? 'Author sign in' : 'Charlie’s journal'} — A little human`
   }, [location])
-  return <div className="shell"><a href="#main" className="skip-link">Skip to content</a><header className="header flex items-center justify-between"><Link to="/" className="brand flex items-center gap-2"><Robot /><span>charlie<span className="accent">.</span></span></Link><nav className="flex items-center" aria-label="Main navigation"><NavLink to="/" end>Journal</NavLink><NavLink to="/about">About</NavLink><span className="nav-divider" /><button className="theme-toggle" onClick={() => setDark(!dark)} aria-label={`Switch to ${dark ? 'light' : 'dark'} mode`} title={`Switch to ${dark ? 'light' : 'dark'} mode`}>{dark ? <Sun size={18} /> : <Moon size={18} />}</button></nav></header><main id="main"><Routes><Route path="/" element={<Home />} /><Route path="/posts/:slug" element={<Article />} /><Route path="/about" element={<About />} /><Route path="/signin" element={<SignIn />} /><Route path="/write" element={<WritePost />} /><Route path="*" element={<NotFound />} /></Routes></main><footer className="footer flex items-center justify-end"><AuthorLink /></footer></div>
+  return <div className="shell"><a href="#main" className="skip-link">Skip to content</a><header className="header flex items-center justify-between"><Link to="/" className="brand flex items-center gap-2"><Robot /><span>charlie<span className="accent">.</span></span></Link><nav className="flex items-center" aria-label="Main navigation"><NavLink to="/" end>Journal</NavLink><NavLink to="/about">About</NavLink><span className="nav-divider" /><button className="theme-toggle" onClick={() => setDark(!dark)} aria-label={`Switch to ${dark ? 'light' : 'dark'} mode`} title={`Switch to ${dark ? 'light' : 'dark'} mode`}>{dark ? <Sun size={18} /> : <Moon size={18} />}</button></nav></header><main id="main"><Routes><Route path="/" element={<Home />} /><Route path="/posts/:slug" element={<Article />} /><Route path="/about" element={<About />} /><Route path="/signin" element={<SignIn />} /><Route path="/write" element={<WritePost />} /><Route path="/posts/:slug/edit" element={<EditPost />} /><Route path="*" element={<NotFound />} /></Routes></main><footer className="footer flex items-center justify-end"><AuthorLink /></footer></div>
 }
 
 const convexUrl = import.meta.env.VITE_CONVEX_URL

@@ -88,3 +88,43 @@ describe('post publishing authorization', () => {
     expect(await t.query(api.posts.getBySlug, { slug: 'missing' })).toBeNull()
   })
 })
+
+
+describe('post editing', () => {
+  test('only the authenticated author can update posts', async () => {
+    const { t, author } = await setupAuthor()
+    const { id } = await author.mutation(api.posts.create, input)
+    const otherId = await t.run(ctx => ctx.db.insert('users', { githubId: '99999' }))
+    const other = t.withIdentity({ subject: `${otherId}|test-session` })
+    for (const visitor of [t, other]) {
+      await expect(visitor.mutation(api.posts.update, { id, ...input, title: 'Unauthorized' })).rejects.toThrow('Only the blog author')
+    }
+    expect(await t.query(api.posts.getBySlug, { slug: input.slug })).toMatchObject({ title: input.title })
+  })
+
+  test('updates the existing post, preserving ownership and publication date', async () => {
+    const { t, author } = await setupAuthor()
+    const { id } = await author.mutation(api.posts.create, input)
+    const original = await t.run(ctx => ctx.db.get(id))
+    await author.mutation(api.posts.update, { id, ...input, title: ' Revised title ', category: 'Notes', content: 'word '.repeat(441) })
+    expect(await t.run(ctx => ctx.db.get(id))).toMatchObject({
+      title: 'Revised title', category: 'Notes', readingMinutes: 3,
+      authorId: original!.authorId, publishedAt: original!.publishedAt,
+    })
+    await author.mutation(api.posts.update, { id, ...input, slug: 'revised-url' })
+    expect(await t.query(api.posts.getBySlug, { slug: input.slug })).toBeNull()
+    expect(await t.query(api.posts.getBySlug, { slug: 'revised-url' })).toMatchObject({ _id: id })
+  })
+
+  test('rejects invalid edits, duplicate URLs, and missing posts', async () => {
+    const { t, author } = await setupAuthor()
+    const { id } = await author.mutation(api.posts.create, input)
+    await author.mutation(api.posts.create, { ...input, slug: 'another-post' })
+    for (const overrides of [{ title: ' ' }, { excerpt: 'a'.repeat(401) }, { content: '' }, { slug: '../invalid' }, { slug: 'another-post' }]) {
+      await expect(author.mutation(api.posts.update, { id, ...input, ...overrides })).rejects.toThrow()
+    }
+    expect(await t.query(api.posts.getBySlug, { slug: input.slug })).toMatchObject({ title: input.title })
+    await t.run(ctx => ctx.db.delete(id))
+    await expect(author.mutation(api.posts.update, { id, ...input })).rejects.toThrow('no longer exists')
+  })
+})

@@ -3,17 +3,18 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { WritePost } from '../src/publishing'
+import { getFunctionName } from 'convex/server'
+import { EditPost, WritePost } from '../src/publishing'
 
-const { create } = vi.hoisted(() => ({ create: vi.fn() }))
+const { create, update, query, auth } = vi.hoisted(() => ({ create: vi.fn(), update: vi.fn(), query: vi.fn(), auth: vi.fn() }))
 vi.mock('convex/react', () => ({
-  useConvexAuth: () => ({ isLoading: false, isAuthenticated: true }),
-  useQuery: () => ({ name: 'Charlie', canPublish: true }),
-  useMutation: () => create,
+  useConvexAuth: auth,
+  useQuery: query,
+  useMutation: (ref: Parameters<typeof getFunctionName>[0]) => getFunctionName(ref) === 'posts:update' ? update : create,
 }))
 vi.mock('@convex-dev/auth/react', () => ({ useAuthActions: () => ({ signOut: vi.fn() }) }))
 
-beforeEach(() => { localStorage.clear(); create.mockReset() })
+beforeEach(() => { localStorage.clear(); create.mockReset(); update.mockReset(); query.mockReset(); auth.mockReturnValue({ isLoading: false, isAuthenticated: true }); query.mockReturnValue({ name: 'Charlie', canPublish: true }) })
 afterEach(cleanup)
 
 function renderEditor() {
@@ -61,4 +62,54 @@ test('restores a draft and preserves a manually chosen URL when the title change
   await user.type(screen.getByLabelText('Title'), 'A revised title')
   expect((screen.getByLabelText(/Post URL/) as HTMLInputElement).value).toBe('permanent-url')
   expect((screen.getByLabelText(/Your story/) as HTMLTextAreaElement).value).toBe('Saved writing')
+})
+
+
+const existingPost = { _id: 'post-id', title: 'Original title', slug: 'original-url', excerpt: 'Original summary', category: 'Life', content: 'Original story', publishedAt: 1000 }
+function renderEdit() {
+  query.mockImplementation((ref: Parameters<typeof getFunctionName>[0]) => getFunctionName(ref) === 'posts:viewer' ? { canPublish: true } : existingPost)
+  render(<MemoryRouter initialEntries={['/posts/original-url/edit']}><Routes><Route path="/posts/:slug/edit" element={<EditPost />} /><Route path="/posts/:slug" element={<p>Updated article</p>} /><Route path="/signin" element={<p>Sign in required</p>} /></Routes></MemoryRouter>)
+  return userEvent.setup()
+}
+
+test('loads existing content, previews edits, and saves without touching the new-post draft', async () => {
+  localStorage.setItem('charlie-post-draft-v1', 'unrelated draft')
+  update.mockResolvedValue({ id: 'post-id', slug: 'original-url' })
+  const user = renderEdit()
+  expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe('Original title')
+  await user.clear(screen.getByLabelText('Title'))
+  await user.type(screen.getByLabelText('Title'), 'Revised title')
+  await user.click(screen.getByRole('button', { name: 'Preview', exact: true }))
+  expect(screen.getByRole('heading', { name: 'Revised title' })).toBeTruthy()
+  await user.click(screen.getByRole('button', { name: 'Back to writing' }))
+  await user.click(screen.getByRole('button', { name: 'Save changes' }))
+  await screen.findByText('Updated article')
+  expect(update).toHaveBeenCalledWith({ id: 'post-id', title: 'Revised title', slug: 'original-url', excerpt: 'Original summary', category: 'Life', content: 'Original story' })
+  expect(create).not.toHaveBeenCalled()
+  expect(localStorage.getItem('charlie-post-draft-v1')).toBe('unrelated draft')
+})
+
+test('failed saves retain edits and allow retry', async () => {
+  update.mockRejectedValue(new Error('Offline'))
+  const user = renderEdit()
+  await user.type(screen.getByLabelText('Title'), ' revised')
+  await user.click(screen.getByRole('button', { name: 'Save changes' }))
+  expect((await screen.findByRole('alert')).textContent).toContain('Your edits are still here')
+  expect((screen.getByLabelText('Title') as HTMLInputElement).value).toBe('Original title revised')
+  expect((screen.getByRole('button', { name: 'Save changes' }) as HTMLButtonElement).disabled).toBe(false)
+})
+
+test('cancel returns to the article without saving', async () => {
+  const user = renderEdit()
+  await user.type(screen.getByLabelText('Title'), ' revised')
+  await user.click(screen.getByRole('link', { name: 'Cancel' }))
+  await screen.findByText('Updated article')
+  expect(update).not.toHaveBeenCalled()
+})
+
+test('anonymous direct edit links require sign-in', async () => {
+  auth.mockReturnValue({ isLoading: false, isAuthenticated: false })
+  renderEdit()
+  await screen.findByText('Sign in required')
+  expect(screen.queryByRole('button', { name: 'Save changes' })).toBeNull()
 })

@@ -3,8 +3,9 @@ import type { FormEvent } from 'react'
 import { useAuthActions } from '@convex-dev/auth/react'
 import { useConvexAuth, useMutation, useQuery } from 'convex/react'
 import { ConvexError } from 'convex/values'
-import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { LogIn, ArrowLeft, Eye, Pencil, Send, LogOut } from 'lucide-react'
+import type { Doc } from '../convex/_generated/dataModel'
 import { api } from '../convex/_generated/api'
 import { Loading, Meta, PostBody, Robot } from './components'
 
@@ -58,8 +59,22 @@ export function WritePost() {
   return <Editor />
 }
 
-function Editor() {
-  const [draft, setDraft] = useState<Draft>(restoreDraft)
+export function EditPost() {
+  const { slug = '' } = useParams()
+  const { isLoading, isAuthenticated } = useConvexAuth()
+  const viewer = useQuery(api.posts.viewer)
+  const post = useQuery(api.posts.getBySlug, isAuthenticated && viewer?.canPublish ? { slug } : 'skip')
+  if (isLoading || viewer === undefined) return <Loading message="Checking author access..." />
+  if (!isAuthenticated || !viewer?.canPublish) return <Navigate to="/signin" replace />
+  if (post === undefined) return <Loading message="Opening your post..." />
+  if (!post) return <section className="article"><h1>Post not found.</h1><p className="form-help">This post may have moved or been removed.</p><Link className="back-link" to="/">Back to the journal</Link></section>
+  return <Editor key={post._id} post={post} />
+}
+
+function Editor({ post }: { post?: Draft & Pick<Doc<'posts'>, '_id' | 'publishedAt'> }) {
+  const [draft, setDraft] = useState<Draft>(() => post ? {
+    title: post.title, slug: post.slug, excerpt: post.excerpt, category: post.category, content: post.content,
+  } : restoreDraft())
   const [preview, setPreview] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -67,13 +82,14 @@ function Editor() {
   const slugEdited = useRef(Boolean(draft.slug))
   const published = useRef(false)
   const create = useMutation(api.posts.create)
+  const update = useMutation(api.posts.update)
   const { signOut } = useAuthActions()
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (published.current) return
+    if (published.current || post) return
     try { localStorage.setItem(draftKey, JSON.stringify(draft)); setSaved(true) } catch { setSaved(false) }
-  }, [draft])
+  }, [draft, post])
 
   function change<K extends keyof Draft>(key: K, value: Draft[K]) {
     setDraft(previous => ({ ...previous, [key]: value,
@@ -86,20 +102,20 @@ function Editor() {
     if (busy) return
     setBusy(true); setError('')
     try {
-      const post = await create(draft)
+      const result = post ? await update({ id: post._id, ...draft }) : await create(draft)
       published.current = true
-      try { localStorage.removeItem(draftKey) } catch { /* Publishing succeeded even without storage. */ }
-      navigate(`/posts/${post.slug}`, { state: { published: true } })
+      try { if (!post) localStorage.removeItem(draftKey) } catch { /* Publishing succeeded even without storage. */ }
+      navigate(`/posts/${result.slug}`, { state: post ? { updated: true } : { published: true } })
     } catch (error) {
-      setError(error instanceof ConvexError ? String(error.data) : 'The post could not be published. Your draft is still here; please try again.')
+      setError(error instanceof ConvexError ? String(error.data) : post ? 'The changes could not be saved. Your edits are still here; please try again.' : 'The post could not be published. Your draft is still here; please try again.')
       setBusy(false)
     }
   }
 
   return <section className="editor article">
     <div className="editor-toolbar flex flex-wrap items-center justify-between gap-3"><Link to="/" className="back-link inline-flex items-center gap-2"><ArrowLeft size={15} /> Journal</Link><button className="text-button inline-flex items-center gap-2" disabled={busy} onClick={async () => { try { await signOut(); navigate('/') } catch { setError('Could not sign out. Please try again.') } }}><LogOut size={14} /> Sign out</button></div>
-    <div className="eyebrow accent">THE WRITING DESK</div><h1>A new entry.</h1><p className="form-help">Start with a thought. See where it takes you.</p>
-    <div className="editor-tabs flex items-center justify-between"><div className="flex gap-2"><button className={!preview ? 'selected' : ''} aria-pressed={!preview} onClick={() => setPreview(false)}><Pencil size={14} /> Write</button><button className={preview ? 'selected' : ''} aria-pressed={preview} onClick={() => setPreview(true)}><Eye size={14} /> Preview</button></div><span>{saved ? 'Draft saved in this browser' : 'Draft is not saved locally'}</span></div>
+    <div className="eyebrow accent">THE WRITING DESK</div><h1>{post ? 'Edit your entry.' : 'A new entry.'}</h1><p className="form-help">{post ? 'Revisit your words. Save when you are ready.' : 'Start with a thought. See where it takes you.'}</p>
+    <div className="editor-tabs flex items-center justify-between"><div className="flex gap-2"><button className={!preview ? 'selected' : ''} aria-pressed={!preview} onClick={() => setPreview(false)}><Pencil size={14} /> Write</button><button className={preview ? 'selected' : ''} aria-pressed={preview} onClick={() => setPreview(true)}><Eye size={14} /> Preview</button></div><span>{post ? 'Changes are saved when you choose Save changes' : saved ? 'Draft saved in this browser' : 'Draft is not saved locally'}</span></div>
     <form onSubmit={publish}>
       <fieldset disabled={busy} hidden={preview} className="editor-fields">
         <label>Title<input required maxLength={160} value={draft.title} onChange={e => change('title', e.target.value)} placeholder="What’s on your mind?" /></label>
@@ -107,9 +123,9 @@ function Editor() {
         <label>Short summary<textarea required maxLength={400} rows={3} value={draft.excerpt} onChange={e => change('excerpt', e.target.value)} placeholder="A sentence or two for the journal page." /></label>
         <label>Your story<textarea required maxLength={100000} rows={15} className="story-input" value={draft.content} onChange={e => change('content', e.target.value)} placeholder="Begin here…" /><span className="input-hint">Plain text. Leave a blank line between paragraphs.</span></label>
       </fieldset>
-      {preview && <div className="editor-preview"><Meta post={{ category: draft.category, publishedAt: Date.now(), readingMinutes: Math.max(1, Math.ceil(draft.content.trim().split(/\s+/).length / 220)) }} /><h2>{draft.title || 'Your title goes here'}</h2><p className="article-deck">{draft.excerpt || 'Your short summary will appear here.'}</p><div className="author flex items-center gap-3"><Robot /><span>Written by Charlie</span></div><PostBody content={draft.content || 'Your story will appear here.'} /></div>}
+      {preview && <div className="editor-preview"><Meta post={{ category: draft.category, publishedAt: post?.publishedAt ?? Date.now(), readingMinutes: Math.max(1, Math.ceil(draft.content.trim().split(/\s+/).length / 220)) }} /><h2>{draft.title || 'Your title goes here'}</h2><p className="article-deck">{draft.excerpt || 'Your short summary will appear here.'}</p><div className="author flex items-center gap-3"><Robot /><span>Written by Charlie</span></div><PostBody content={draft.content || 'Your story will appear here.'} /></div>}
       {error && <p className="form-error" role="alert">{error}</p>}
-      <div className="publish-bar flex flex-wrap items-center justify-between gap-3"><span>Publishing makes this post visible to everyone.</span><button className="primary-button" type={preview ? 'button' : 'submit'} disabled={busy} onClick={preview ? () => setPreview(false) : undefined}>{preview ? <><Pencil size={16} /> Back to writing</> : <><Send size={16} />{busy ? 'Publishing…' : 'Publish post'}</>}</button></div>
+      <div className="publish-bar flex flex-wrap items-center justify-between gap-3"><span>{post ? 'Saved changes are visible to everyone immediately.' : 'Publishing makes this post visible to everyone.'}</span>{post && !busy && <Link className="text-button" to={`/posts/${post.slug}`}>Cancel</Link>}<button className="primary-button" type={preview ? 'button' : 'submit'} disabled={busy} onClick={preview ? () => setPreview(false) : undefined}>{preview ? <><Pencil size={16} /> Back to writing</> : <><Send size={16} />{busy ? (post ? 'Saving...' : 'Publishing...') : post ? 'Save changes' : 'Publish post'}</>}</button></div>
     </form>
   </section>
 }
