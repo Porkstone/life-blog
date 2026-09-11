@@ -14,7 +14,7 @@ Convex writes `.env.local` with the development deployment URL. Run the backend 
 
 ## Publishing
 
-Use **Author sign in** in the footer, then **Continue with GitHub**. The writing desk at `/write` supports title, unique URL slug, category, short summary, plain-text paragraphs, preview, and publishing. Unpublished drafts stay in the current browser. Published posts are persisted in Convex and appear reactively for all readers.
+Use **Author sign in** in the footer, then **Continue with GitHub**. The writing desk at `/write` supports title, unique URL slug, category, short summary, plain-text paragraphs, preview, private server drafts, and publishing. Choose **Save as draft** at any point—even before every field is complete—to store an unpublished draft in Convex. Saved drafts appear at the top of the writing desk and can be reopened from any signed-in browser. Published posts appear reactively for all readers; drafts are only available to the authorized author.
 
 Authorization is enforced in Convex, not just by hiding the editor. The GitHub profile ID is checked during account creation and session creation, and checked again against the authenticated user on every publish. Public queries omit private user fields and use indexes and pagination.
 
@@ -72,4 +72,4 @@ pnpm test
 pnpm build
 ```
 
-Backend tests cover unauthenticated writes, a different authenticated account, successful publishing, public field privacy, duplicate slugs, input validation, category filtering, and pagination. `docs/review/backend-check.mjs` checks the empty journal, sign-in, editor route protection, missing posts, mobile overflow, and saved theme against the local dev server.
+Backend tests cover unauthenticated writes, a different authenticated account, private draft access, draft-to-post publishing, successful publishing, public field privacy, duplicate slugs, input validation, category filtering, and pagination. `docs/review/backend-check.mjs` checks the empty journal, sign-in, editor route protection, missing posts, mobile overflow, and saved theme against the local dev server.

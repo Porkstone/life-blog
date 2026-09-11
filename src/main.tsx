@@ -6,7 +6,7 @@ import { ConvexReactClient, usePaginatedQuery, useQuery } from 'convex/react'
 import { ConvexAuthProvider } from '@convex-dev/auth/react'
 import { api } from '../convex/_generated/api'
 import { BackLink, ErrorBoundary, formatDate, Loading, Meta, PostBody, Robot } from './components'
-import { AuthorLink, EditPost, SignIn, WritePost } from './publishing'
+import { AuthorLink, DraftPost, EditPost, SignIn, WritePost } from './publishing'
 import '@fontsource/dm-sans/400.css'
 import '@fontsource/dm-sans/500.css'
 import '@fontsource/dm-sans/600.css'
@@ -60,9 +60,9 @@ function App() {
   useEffect(() => {
     if (location.hash) requestAnimationFrame(() => document.getElementById(location.hash.slice(1))?.scrollIntoView())
     else window.scrollTo(0, 0)
-    if (!location.pathname.startsWith('/posts/')) document.title = `${location.pathname === '/about' ? 'About Charlieb' : location.pathname === '/write' ? 'Writing desk' : location.pathname === '/signin' ? 'Author sign in' : 'Charlieb’s journal'} — A little human`
+    if (!location.pathname.startsWith('/posts/')) document.title = `${location.pathname === '/about' ? 'About Charlieb' : location.pathname === '/write' || location.pathname.startsWith('/drafts/') ? 'Writing desk' : location.pathname === '/signin' ? 'Author sign in' : 'Charlieb’s journal'} — A little human`
   }, [location])
-  return <div className="shell"><a href="#main" className="skip-link">Skip to content</a><header className="header flex items-center justify-between"><Link to="/" className="brand flex items-center gap-2"><Robot /><span>charlieb<span className="accent">.</span></span></Link><nav className="flex items-center" aria-label="Main navigation"><NavLink to="/" end>Journal</NavLink><NavLink to="/about">About</NavLink><span className="nav-divider" /><button className="theme-toggle" onClick={() => setDark(!dark)} aria-label={`Switch to ${dark ? 'light' : 'dark'} mode`} title={`Switch to ${dark ? 'light' : 'dark'} mode`}>{dark ? <Sun size={18} /> : <Moon size={18} />}</button></nav></header><main id="main"><Routes><Route path="/" element={<Home />} /><Route path="/posts/:slug" element={<Article />} /><Route path="/about" element={<About />} /><Route path="/signin" element={<SignIn />} /><Route path="/write" element={<WritePost />} /><Route path="/posts/:slug/edit" element={<EditPost />} /><Route path="*" element={<NotFound />} /></Routes></main><footer className="footer flex items-center justify-end"><AuthorLink /></footer></div>
+  return <div className="shell"><a href="#main" className="skip-link">Skip to content</a><header className="header flex items-center justify-between"><Link to="/" className="brand flex items-center gap-2"><Robot /><span>charlieb<span className="accent">.</span></span></Link><nav className="flex items-center" aria-label="Main navigation"><NavLink to="/" end>Journal</NavLink><NavLink to="/about">About</NavLink><span className="nav-divider" /><button className="theme-toggle" onClick={() => setDark(!dark)} aria-label={`Switch to ${dark ? 'light' : 'dark'} mode`} title={`Switch to ${dark ? 'light' : 'dark'} mode`}>{dark ? <Sun size={18} /> : <Moon size={18} />}</button></nav></header><main id="main"><Routes><Route path="/" element={<Home />} /><Route path="/posts/:slug" element={<Article />} /><Route path="/about" element={<About />} /><Route path="/signin" element={<SignIn />} /><Route path="/write" element={<WritePost />} /><Route path="/drafts/:id/edit" element={<DraftPost />} /><Route path="/posts/:slug/edit" element={<EditPost />} /><Route path="*" element={<NotFound />} /></Routes></main><footer className="footer flex items-center justify-end"><AuthorLink /></footer></div>
 }
 
 const convexUrl = import.meta.env.VITE_CONVEX_URL

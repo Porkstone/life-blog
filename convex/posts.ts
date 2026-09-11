@@ -11,6 +11,14 @@ const summaryFields = {
 }
 const summaryValidator = v.object(summaryFields)
 const articleValidator = v.object({ ...summaryFields, content: v.string() })
+const draftFields = {
+  _id: v.id('drafts'), title: v.string(), slug: v.string(), excerpt: v.string(),
+  category, content: v.string(), updatedAt: v.number(),
+}
+const draftValidator = v.object(draftFields)
+const draftSummaryValidator = v.object({
+  _id: v.id('drafts'), title: v.string(), excerpt: v.string(), category, updatedAt: v.number(),
+})
 
 function summarize(post: Doc<'posts'>) {
   return {
@@ -67,6 +75,20 @@ export const getBySlug = query({
 
 const postFields = { title: v.string(), excerpt: v.string(), category, content: v.string(), slug: v.string() }
 
+function validateDraft(args: Pick<Doc<'drafts'>, 'title' | 'excerpt' | 'content' | 'slug' | 'category'>) {
+  const title = args.title.trim()
+  const excerpt = args.excerpt.trim()
+  const content = args.content.trim()
+  const slug = args.slug.trim().toLowerCase()
+  if (title.length > 160) throw new ConvexError('Use a title of up to 160 characters.')
+  if (excerpt.length > 400) throw new ConvexError('Use a summary of up to 400 characters.')
+  if (content.length > 100_000) throw new ConvexError('Keep the draft under 100,000 characters.')
+  if (slug && (slug.length > 160 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug))) {
+    throw new ConvexError('Use a URL slug of up to 160 lowercase letters, numbers, and hyphens.')
+  }
+  return { title, excerpt, content, slug, category: args.category }
+}
+
 function validatePost(args: Pick<Doc<'posts'>, 'title' | 'excerpt' | 'content' | 'slug' | 'category'>) {
   const title = args.title.trim()
   const excerpt = args.excerpt.trim()
@@ -93,6 +115,66 @@ export const create = mutation({
     const id = await ctx.db.insert('posts', {
       ...post, authorId: author._id, publishedAt: Date.now(),
     })
+    return { id, slug: post.slug }
+  },
+})
+
+export const listDrafts = query({
+  args: {},
+  returns: v.array(draftSummaryValidator),
+  handler: async ctx => {
+    const author = await requireAuthor(ctx)
+    const drafts = await ctx.db.query('drafts')
+      .withIndex('by_authorId_and_updatedAt', q => q.eq('authorId', author._id))
+      .order('desc').take(20)
+    return drafts.map(({ _id, title, excerpt, category: draftCategory, updatedAt }) => ({
+      _id, title, excerpt, category: draftCategory, updatedAt,
+    }))
+  },
+})
+
+export const getDraft = query({
+  args: { id: v.id('drafts') },
+  returns: v.union(draftValidator, v.null()),
+  handler: async (ctx, { id }) => {
+    const author = await requireAuthor(ctx)
+    const draft = await ctx.db.get(id)
+    if (!draft || draft.authorId !== author._id) return null
+    const { _id, title, slug, excerpt, category: draftCategory, content, updatedAt } = draft
+    return { _id, title, slug, excerpt, category: draftCategory, content, updatedAt }
+  },
+})
+
+export const saveDraft = mutation({
+  args: { id: v.optional(v.id('drafts')), ...postFields },
+  returns: v.object({ id: v.id('drafts'), updatedAt: v.number() }),
+  handler: async (ctx, args) => {
+    const author = await requireAuthor(ctx)
+    const draft = validateDraft(args)
+    const updatedAt = Date.now()
+    if (args.id) {
+      const existing = await ctx.db.get(args.id)
+      if (!existing || existing.authorId !== author._id) throw new ConvexError('This draft no longer exists.')
+      await ctx.db.patch(args.id, { ...draft, updatedAt })
+      return { id: args.id, updatedAt }
+    }
+    const id = await ctx.db.insert('drafts', { ...draft, authorId: author._id, updatedAt })
+    return { id, updatedAt }
+  },
+})
+
+export const publishDraft = mutation({
+  args: { id: v.id('drafts'), ...postFields },
+  returns: v.object({ id: v.id('posts'), slug: v.string() }),
+  handler: async (ctx, args) => {
+    const author = await requireAuthor(ctx)
+    const draft = await ctx.db.get(args.id)
+    if (!draft || draft.authorId !== author._id) throw new ConvexError('This draft no longer exists.')
+    const post = validatePost(args)
+    const existing = await ctx.db.query('posts').withIndex('by_slug', q => q.eq('slug', post.slug)).unique()
+    if (existing) throw new ConvexError('That post URL is already in use. Choose a different slug.')
+    const id = await ctx.db.insert('posts', { ...post, authorId: author._id, publishedAt: Date.now() })
+    await ctx.db.delete(args.id)
     return { id, slug: post.slug }
   },
 })

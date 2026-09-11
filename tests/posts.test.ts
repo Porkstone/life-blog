@@ -128,3 +128,49 @@ describe('post editing', () => {
     await expect(author.mutation(api.posts.update, { id, ...input })).rejects.toThrow('no longer exists')
   })
 })
+
+describe('unpublished drafts', () => {
+  test('the author can save an incomplete draft without making it public', async () => {
+    const { t, author } = await setupAuthor()
+    const partial = { title: '  Early thought  ', slug: 'early-thought', excerpt: '', category: 'Notes' as const, content: '' }
+    const saved = await author.mutation(api.posts.saveDraft, partial)
+    expect(await t.query(api.posts.latest)).toBeNull()
+    expect(await t.query(api.posts.getBySlug, { slug: partial.slug })).toBeNull()
+    expect((await t.query(api.posts.list, { paginationOpts: { cursor: null, numItems: 10 } })).page).toEqual([])
+    expect(await author.query(api.posts.getDraft, { id: saved.id })).toMatchObject({ title: 'Early thought', excerpt: '', content: '' })
+    const drafts = await author.query(api.posts.listDrafts)
+    expect(drafts).toEqual([expect.objectContaining({ _id: saved.id, title: 'Early thought' })])
+    expect(drafts[0]).not.toHaveProperty('content')
+  })
+
+  test('saving again updates the same draft', async () => {
+    const { t, author } = await setupAuthor()
+    const saved = await author.mutation(api.posts.saveDraft, { ...input, title: '' })
+    await author.mutation(api.posts.saveDraft, { id: saved.id, ...input, title: 'Ready soon' })
+    expect(await author.query(api.posts.getDraft, { id: saved.id })).toMatchObject({ title: 'Ready soon' })
+    expect(await t.run(ctx => ctx.db.query('drafts').collect())).toHaveLength(1)
+  })
+
+  test('publishing a draft creates the public post and removes the private copy', async () => {
+    const { t, author } = await setupAuthor()
+    const saved = await author.mutation(api.posts.saveDraft, { ...input, excerpt: '', content: '' })
+    await expect(author.mutation(api.posts.publishDraft, { id: saved.id, ...input, excerpt: '' })).rejects.toThrow('summary')
+    const published = await author.mutation(api.posts.publishDraft, { id: saved.id, ...input })
+    expect(await author.query(api.posts.getDraft, { id: saved.id })).toBeNull()
+    expect(await t.query(api.posts.getBySlug, { slug: published.slug })).toMatchObject({ _id: published.id, title: input.title })
+    expect(await t.query(api.posts.latest)).toMatchObject({ _id: published.id })
+  })
+
+  test('visitors and other accounts cannot read or change drafts', async () => {
+    const { t, author } = await setupAuthor()
+    const saved = await author.mutation(api.posts.saveDraft, input)
+    const otherId = await t.run(ctx => ctx.db.insert('users', { githubId: '99999' }))
+    const other = t.withIdentity({ subject: `${otherId}|test-session` })
+    for (const visitor of [t, other]) {
+      await expect(visitor.query(api.posts.listDrafts)).rejects.toThrow('Only the blog author')
+      await expect(visitor.query(api.posts.getDraft, { id: saved.id })).rejects.toThrow('Only the blog author')
+      await expect(visitor.mutation(api.posts.saveDraft, { id: saved.id, ...input })).rejects.toThrow('Only the blog author')
+      await expect(visitor.mutation(api.posts.publishDraft, { id: saved.id, ...input })).rejects.toThrow('Only the blog author')
+    }
+  })
+})

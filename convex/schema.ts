@@ -28,4 +28,13 @@ export default defineSchema({
   }).index('by_slug', ['slug'])
     .index('by_publishedAt', ['publishedAt'])
     .index('by_category_and_publishedAt', ['category', 'publishedAt']),
+  drafts: defineTable({
+    title: v.string(),
+    slug: v.string(),
+    excerpt: v.string(),
+    category,
+    content: v.string(),
+    authorId: v.id('users'),
+    updatedAt: v.number(),
+  }).index('by_authorId_and_updatedAt', ['authorId', 'updatedAt']),
 })
